@@ -1,0 +1,44 @@
+// Start Custom to console firebase proggress 1-4
+
+// Uptude rules opsi_2
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isSuperAdmin() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'superadmin';
+    }
+
+    match /admins/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && resource == null;
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null && isSuperAdmin();
+    }
+
+    match /assets/{assetId} {  
+      allow read: if true;  
+      allow create, update, delete: if request.auth != null && (isAdmin() || isSuperAdmin());
+    }
+    
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isSuperAdmin());
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+    }
+
+    match /{document=**} {   
+      allow read, write: if request.auth != null && isSuperAdmin();
+    }
+  }
+}
+
+// End Custom to console firebase proggress 1-4
