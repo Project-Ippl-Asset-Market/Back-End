@@ -1,9 +1,13 @@
+// firebaseConfig.js
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
+import { getStorage } from "firebase-admin/storage"; 
 import dotenv from "dotenv";
 
 dotenv.config();
 
+// Firebase Admin Initialization
 const serviceAccount = {
   type: "service_account",
   project_id: process.env.FIREBASE_PROJECT_ID,
@@ -17,10 +21,13 @@ const serviceAccount = {
   client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
 };
 
-const app = initializeApp({
+initializeApp({
   credential: cert(serviceAccount),
+  storageBucket: `${process.env.FIREBASE_PROJECT_ID}.appspot.com`, 
 });
 
 const db = getFirestore();
+const auth = getAuth();
+const storage = getStorage();  
 
-export { app, db };
+export { db, auth, storage };
