@@ -1,5 +1,5 @@
 import express from "express";
-import multer from "multer"; // Pastikan multer diimpor
+import multer from "multer";
 import {
   getAllAdmins,
   createAdmin,

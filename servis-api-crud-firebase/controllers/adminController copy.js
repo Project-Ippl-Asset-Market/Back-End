@@ -20,6 +20,7 @@ export const getAllAdmins = async (req, res) => {
     });
     res.json(admins);
   } catch (error) {
+    console.error("Error fetching admins:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -44,6 +45,7 @@ export const createAdmin = async (req, res) => {
     const adminRef = await db.collection("admins").add(newAdmin);
     res.status(201).json({ id: adminRef.id, ...newAdmin });
   } catch (error) {
+    console.error("Error creating admin:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -62,6 +64,7 @@ export const getAdminById = async (req, res) => {
 
     res.json({ id: doc.id, ...doc.data() });
   } catch (error) {
+    console.error("Error fetching admin:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -76,9 +79,9 @@ export const updateAdmin = async (req, res) => {
     role,
     username,
     oldProfileImageUrl,
-  } = req.body;
-  const file = req.file;
-  let profileImageUrl;
+  } = req.body; // Dapatkan URL gambar lama
+  const file = req.file; // Ambil file dari req.file
+  let profileImageUrl; // Inisialisasi variabel profileImageUrl
 
   try {
     const updateData = {
@@ -109,9 +112,9 @@ export const updateAdmin = async (req, res) => {
 
     // Jika ada file yang di-upload, simpan di Storage dan update URL di Firestore
     if (file) {
-      const bucket = getStorage().bucket();
-      const fileName = `${uuidv4()}_${file.originalname}`;
-      const fileUpload = bucket.file(`images-admin/${fileName}`);
+      const bucket = getStorage().bucket(); // Ambil bucket storage
+      const fileName = `${uuidv4()}_${file.originalname}`; // Buat nama file unik
+      const fileUpload = bucket.file(`images-admin/${fileName}`); // Ganti dengan path yang sesuai
 
       // Upload file
       await fileUpload.save(file.buffer, {
@@ -119,13 +122,13 @@ export const updateAdmin = async (req, res) => {
         resumable: false,
         metadata: {
           metadata: {
-            firebaseStorageDownloadTokens: uuidv4(),
+            firebaseStorageDownloadTokens: uuidv4(), // Tambahkan token akses
           },
         },
       });
 
       // Dapatkan URL download dengan token
-      const [metadata] = await fileUpload.getMetadata();
+      const [metadata] = await fileUpload.getMetadata(); // Ambil metadata file
       const token = metadata.metadata.firebaseStorageDownloadTokens;
       profileImageUrl = `https://firebasestorage.googleapis.com/v0/b/${
         bucket.name
@@ -140,8 +143,8 @@ export const updateAdmin = async (req, res) => {
         const oldFileName = decodeURIComponent(
           oldProfileImageUrl.split("/").pop().split("?")[0].split("%2F")[1]
         ); // Ambil nama file dari URL
-        const oldFilePath = `images-admin/${oldFileName}`;
-        await bucket.file(oldFilePath).delete();
+        const oldFilePath = `images-admin/${oldFileName}`; // Path ke gambar lama
+        await bucket.file(oldFilePath).delete(); // Hapus gambar lama
         console.log(
           `Gambar lama berhasil dihapus dari Storage: ${oldFilePath}`
         );
@@ -151,7 +154,7 @@ export const updateAdmin = async (req, res) => {
     res.status(200).json({
       id,
       ...updateData,
-      profileImageUrl: file ? profileImageUrl : oldProfileImageUrl,
+      profileImageUrl: file ? profileImageUrl : oldProfileImageUrl, // Kembalikan URL gambar baru jika ada
     });
   } catch (error) {
     console.error("Error updating admin:", error);
@@ -175,16 +178,19 @@ export const deleteAdmin = async (req, res) => {
     }
 
     const adminData = adminDoc.data();
-    const uid = adminData.uid;
+    const uid = adminData.uid; // Ambil UID dari data admin
 
     // Hapus pengguna dari Firebase Authentication
     await auth.deleteUser(uid);
+    console.log(`User with UID ${uid} deleted from Firebase Auth.`);
 
     // Hapus admin dari Firestore
     await adminRef.delete();
+    console.log(`Admin with ID ${id} has been deleted from Firestore.`);
 
     res.status(204).send();
   } catch (error) {
+    console.error("Error deleting admin:", error); // Log detail kesalahan
     res
       .status(500)
       .json({ error: "Internal Server Error", details: error.message });
