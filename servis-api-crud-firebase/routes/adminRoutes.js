@@ -1,20 +1,24 @@
 import express from "express";
+import multer from "multer"; // Pastikan multer diimpor
 import {
+  getAllAdmins,
   createAdmin,
-  getAdmins,
   getAdminById,
   updateAdmin,
   deleteAdmin,
 } from "../controllers/adminController.js";
-import { checkRole } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Superadmin can CRUD admins
-router.get("/", checkRole(["superadmin"]), getAdmins);
-router.post("/", checkRole(["superadmin"]), createAdmin);
-router.get("/:id", checkRole(["superadmin"]), getAdminById);
-router.put("/:id", checkRole(["superadmin"]), updateAdmin);
-router.delete("/:id", checkRole(["superadmin"]), deleteAdmin);
+// Setup multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// CRUD routes for admins
+router.get("/", getAllAdmins);
+router.post("/", createAdmin);
+router.get("/:id", getAdminById);
+router.put("/:id", upload.single("profileImage"), updateAdmin);
+router.delete("/:id", deleteAdmin);
 
 export default router;
