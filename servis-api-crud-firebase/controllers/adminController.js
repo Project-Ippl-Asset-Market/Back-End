@@ -76,6 +76,7 @@ export const updateAdmin = async (req, res) => {
     role,
     username,
     oldProfileImageUrl,
+    password, // Tambahkan field password
   } = req.body;
   const file = req.file;
   let profileImageUrl;
@@ -99,10 +100,15 @@ export const updateAdmin = async (req, res) => {
     console.log(`Admin dengan ID ${id} berhasil diperbarui di Firestore.`);
 
     // Update di Firebase Auth
-    await auth.updateUser(uid, {
+    const authUpdateData = {
       email,
       displayName: `${firstName} ${lastName}`,
-    });
+    };
+    if (password) {
+      authUpdateData.password = password; // Tambahkan pembaruan kata sandi jika ada
+    }
+
+    await auth.updateUser(uid, authUpdateData);
     console.log(
       `Pengguna dengan UID ${uid} berhasil diperbarui di Firebase Auth.`
     );

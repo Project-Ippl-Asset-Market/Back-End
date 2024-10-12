@@ -84,30 +84,36 @@ export const updateUser = async (req, res) => {
       lastName,
       email,
       username,
-      password,
     };
 
-    // Hapus nilai undefined
+    // Hapus nilai undefined dari updateData
     Object.keys(updateData).forEach(
       (key) => updateData[key] === undefined && delete updateData[key]
     );
 
-    // Update di Firestore
+    // Update di Firestore (tanpa menyimpan password)
     await db.collection("users").doc(id).update(updateData);
+    console.log(`Pengguna dengan ID ${id} berhasil diperbarui di Firestore.`);
 
-    // Update di Firebase Auth
-    await auth.updateUser(uid, {
+    // Data untuk update di Firebase Auth
+    const authUpdateData = {
       email,
       displayName: `${firstName} ${lastName}`,
-      password,
-    });
+    };
+
+    if (password) {
+      authUpdateData.password = password; // Tambahkan pembaruan kata sandi jika ada
+    }
+
+    // Update di Firebase Auth
+    await auth.updateUser(uid, authUpdateData);
     console.log(
       `Pengguna dengan UID ${uid} berhasil diperbarui di Firebase Auth.`
     );
 
     // Jika ada file yang di-upload, simpan di Storage dan update URL di Firestore
     if (file) {
-      const bucket = getStorage().bucket(); // Ambil bucket storage
+      const bucket = getStorage().bucket();
       const fileName = `${uuidv4()}_${file.originalname}`;
       const fileUpload = bucket.file(`images-user/${fileName}`);
 
