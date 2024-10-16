@@ -2,8 +2,9 @@
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
-import { getStorage } from "firebase-admin/storage"; 
+import { getStorage } from "firebase-admin/storage";
 import dotenv from "dotenv";
+import midtransClient from "midtrans-client";
 
 dotenv.config();
 
@@ -23,11 +24,17 @@ const serviceAccount = {
 
 initializeApp({
   credential: cert(serviceAccount),
-  storageBucket: `${process.env.FIREBASE_PROJECT_ID}.appspot.com`, 
+  storageBucket: `${process.env.FIREBASE_PROJECT_ID}.appspot.com`,
+});
+
+// Inisialisasi Midtrans
+const midtrans = new midtransClient.Snap({
+  isProduction: false,
+  serverKey: process.env.MIDTRANS_SERVER_KEY,
 });
 
 const db = getFirestore();
 const auth = getAuth();
-const storage = getStorage();  
+const storage = getStorage();
 
-export { db, auth, storage };
+export { db, auth, storage, midtrans };

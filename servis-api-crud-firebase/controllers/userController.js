@@ -93,7 +93,7 @@ export const updateUser = async (req, res) => {
 
     // Update di Firestore (tanpa menyimpan password)
     await db.collection("users").doc(id).update(updateData);
-    console.log(`Pengguna dengan ID ${id} berhasil diperbarui di Firestore.`);
+    console.log(`Pengguna dengan ID ${id} berhasil diuptodate.`);
 
     // Data untuk update di Firebase Auth
     const authUpdateData = {

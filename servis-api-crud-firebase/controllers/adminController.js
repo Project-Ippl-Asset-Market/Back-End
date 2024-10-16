@@ -1,6 +1,6 @@
 import { db, auth } from "../config/firebaseConfig.js";
 import { getStorage } from "firebase-admin/storage";
-import multer from "multer"; // Tambahkan import multer
+import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { Storage } from "@google-cloud/storage";
 import admin from "firebase-admin";
