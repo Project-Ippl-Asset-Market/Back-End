@@ -2,7 +2,7 @@ import { db } from "../config/firebaseConfig.js";
 
 // Function to view asset by assetId
 export const getAssetByIdController = async (req, res) => {
-  const { assetId } = req.params; // Get assetId from URL parameters
+  const { assetId } = req.params;   
 
   try {
     // Fetch asset by assetId
@@ -26,7 +26,7 @@ export const getAssetByIdController = async (req, res) => {
 };
 
 export const moveAssetsController = async (req, res) => {
-  const { uid, assets } = req.body; // Destructure uid and assets from the body
+  const { uid, assets } = req.body; 
 
   // Validate input
   if (!uid || !Array.isArray(assets) || assets.length === 0) {
@@ -62,21 +62,21 @@ export const moveAssetsController = async (req, res) => {
       }
 
       const assetRef = db.collection("cartAssets").doc(asset.assetId);
-      const buyAssetRef = db.collection("buyAssets").doc(asset.assetId); // Use the same ID
+      const buyAssetRef = db.collection("buyAssets").doc(asset.assetId); 
 
       // Create the asset document in buyAssets with price 0 and include buyer's UID
       batch.set(buyAssetRef, {
         ...asset,
-        price: 0, // Set price to 0
-        boughtBy: uid, // Include the buyer's UID
-        createdAt: new Date(), // Store the creation date
+        price: 0, 
+        boughtBy: uid, 
+        createdAt: new Date(), 
       });
 
       // Delete the asset from the cartAssets collection
-      batch.delete(assetRef); // This line deletes the asset from cartAssets
+      batch.delete(assetRef); 
     }
 
-    await batch.commit(); // Execute batch actions
+    await batch.commit(); 
     res
       .status(200)
       .json({ message: "Assets successfully moved to buyAssets." });
