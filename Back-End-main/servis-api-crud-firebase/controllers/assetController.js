@@ -112,6 +112,7 @@ export const moveAssetsController = async (req, res) => {
         });
       }
 
+      // Texttt
       // Cek apakah aset sudah dibeli
       const boughtAssetDoc = await db
         .collection("buyAssets")
