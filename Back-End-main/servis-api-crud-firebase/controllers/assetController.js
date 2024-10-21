@@ -89,7 +89,7 @@ export const getAssetByIdController = async (req, res) => {
 // };
 
 export const moveAssetsController = async (req, res) => {
-  const { uid, assets } = req.body; 
+  const { uid, assets } = req.body;
 
   // Validate input
   if (!uid || !Array.isArray(assets) || assets.length === 0) {
@@ -125,21 +125,21 @@ export const moveAssetsController = async (req, res) => {
       }
 
       const assetRef = db.collection("cartAssets").doc(asset.assetId);
-      const buyAssetRef = db.collection("buyAssets").doc(asset.assetId);  
+      const buyAssetRef = db.collection("buyAssets").doc(asset.assetId); // Use the same ID
 
       // Create the asset document in buyAssets with price 0 and include buyer's UID
       batch.set(buyAssetRef, {
         ...asset,
-        price: 0, 
-        boughtBy: uid,  
-        createdAt: new Date(),  
+        price: 0, // Set price to 0
+        boughtBy: uid, // Include the buyer's UID
+        createdAt: new Date(), // Store the creation date
       });
 
       // Delete the asset from the cartAssets collection
-      batch.delete(assetRef);  
+      batch.delete(assetRef); // This line deletes the asset from cartAssets
     }
 
-    await batch.commit();  
+    await batch.commit(); // Execute batch actions
     res
       .status(200)
       .json({ message: "Assets successfully moved to buyAssets." });
