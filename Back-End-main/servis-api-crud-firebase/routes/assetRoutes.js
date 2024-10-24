@@ -3,6 +3,7 @@ import express from "express";
 import {
   getAssetByIdController,
   moveAssetsController,
+  deleteAssetByIdController,
 } from "../controllers/assetController.js";
 
 const router = express.Router();
@@ -12,5 +13,8 @@ router.get("/:assetId", getAssetByIdController);
 
 // Route to move assets after payment
 router.post("/move-assets", moveAssetsController);
+
+// Route to delete asset by ID
+router.delete("/delete/:docId", deleteAssetByIdController);
 
 export default router;

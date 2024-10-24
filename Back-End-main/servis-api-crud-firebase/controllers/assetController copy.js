@@ -23,82 +23,10 @@ export const getAssetByIdController = async (req, res) => {
   }
 };
 
-// export const moveAssetsController = async (req, res) => {
-//   const { uid, assets } = req.body;
-
-//   // Validate input
-//   if (!uid || !Array.isArray(assets) || assets.length === 0) {
-//     return res.status(400).json({
-//       message: "Invalid input: uid and assets are required.",
-//     });
-//   }
-
-//   try {
-//     const batch = db.batch();
-
-//     for (const asset of assets) {
-//       // Validate assetId
-//       if (!asset.assetId) {
-//         return res.status(400).json({
-//           message: `Invalid asset: ${JSON.stringify(
-//             asset
-//           )} does not have assetId.`,
-//         });
-//       }
-
-//       // Check if asset has been already purchased
-//       const boughtAssetDoc = await db
-//         .collection("buyAssets")
-//         .doc(asset.assetId)
-//         .get();
-
-//       if (boughtAssetDoc.exists) {
-//         console.log(
-//           `Asset ${asset.assetId} has already been purchased. Deleting from cartAssets.`
-//         );
-//         const assetRef = db.collection("cartAssets").doc(asset.assetId);
-//         batch.delete(assetRef); // Delete from cart
-//         continue;
-//       }
-
-//       // Proceed if asset is not purchased
-//       console.log(`Processing asset ${asset.assetId} for purchase.`);
-//       const assetRef = db.collection("cartAssets").doc(asset.assetId);
-//       const buyAssetRef = db.collection("buyAssets").doc(asset.assetId);
-
-//       // Add asset to buyAssets and delete from cartAssets
-//       batch.set(buyAssetRef, {
-//         assetId: asset.assetId,
-//         price: asset.price || 0,
-//         boughtBy: uid,
-//         createdAt: new Date(),
-//       });
-
-//       // Schedule deletion of the asset from cartAssets collection
-//       batch.delete(assetRef);
-//     }
-
-//     await batch.commit();
-//     console.log("Batch operation committed successfully.");
-
-//     res.status(200).json({
-//       message:
-//         "Assets successfully moved to buyAssets and deleted from cartAssets.",
-//     });
-//   } catch (error) {
-//     console.error("Error moving assets:", error);
-//     res.status(500).json({
-//       message: "Error moving assets. Please try again.",
-//       error: error.message,
-//     });
-//   }
-// };
-
-// Fungsi untuk memindahkan aset
 export const moveAssetsController = async (req, res) => {
   const { uid, assets } = req.body;
 
-  // Validasi input
+  // Validate input
   if (!uid || !Array.isArray(assets) || assets.length === 0) {
     return res.status(400).json({
       message: "Invalid input: uid and assets are required.",
@@ -109,7 +37,7 @@ export const moveAssetsController = async (req, res) => {
     const batch = db.batch();
 
     for (const asset of assets) {
-      // Validasi assetId
+      // Validate assetId
       if (!asset.assetId) {
         return res.status(400).json({
           message: `Invalid asset: ${JSON.stringify(
@@ -118,7 +46,7 @@ export const moveAssetsController = async (req, res) => {
         });
       }
 
-      // Cek apakah aset sudah dibeli
+      // Check if asset has been already purchased
       const boughtAssetDoc = await db
         .collection("buyAssets")
         .doc(asset.assetId)
@@ -129,16 +57,16 @@ export const moveAssetsController = async (req, res) => {
           `Asset ${asset.assetId} has already been purchased. Deleting from cartAssets.`
         );
         const assetRef = db.collection("cartAssets").doc(asset.assetId);
-        batch.delete(assetRef); // Hapus dari cart
+        batch.delete(assetRef); // Delete from cart
         continue;
       }
 
-      // Lanjutkan jika aset belum dibeli
+      // Proceed if asset is not purchased
       console.log(`Processing asset ${asset.assetId} for purchase.`);
       const assetRef = db.collection("cartAssets").doc(asset.assetId);
       const buyAssetRef = db.collection("buyAssets").doc(asset.assetId);
 
-      // Tambahkan aset ke buyAssets
+      // Add asset to buyAssets and delete from cartAssets
       batch.set(buyAssetRef, {
         assetId: asset.assetId,
         price: asset.price || 0,
@@ -146,11 +74,10 @@ export const moveAssetsController = async (req, res) => {
         createdAt: new Date(),
       });
 
-      // Hapus aset dari cartAssets
+      // Schedule deletion of the asset from cartAssets collection
       batch.delete(assetRef);
     }
 
-    // Komit semua perubahan dalam batch
     await batch.commit();
     console.log("Batch operation committed successfully.");
 
@@ -169,10 +96,10 @@ export const moveAssetsController = async (req, res) => {
 
 // Function to delete asset by assetId
 export const deleteAssetByIdController = async (req, res) => {
-  const { docId } = req.params;
+  const { assetId } = req.params;
 
   try {
-    const assetRef = db.collection("cartAssets").doc(docId);
+    const assetRef = db.collection("cartAssets").doc(assetId);
     const assetDoc = await assetRef.get();
 
     if (!assetDoc.exists) {
@@ -180,7 +107,6 @@ export const deleteAssetByIdController = async (req, res) => {
     }
 
     await assetRef.delete();
-    console.log(`Successfully deleted asset with docId: ${docId}`);
 
     res.status(200).json({ message: "Asset berhasil dihapus" });
   } catch (error) {
