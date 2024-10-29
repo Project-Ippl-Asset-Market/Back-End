@@ -4,6 +4,7 @@ import {
   getAssetByIdController,
   moveAssetsController,
   deleteAssetByIdController,
+  deleteAssetFromCartBuyNow,
 } from "../controllers/assetController.js";
 
 const router = express.Router();
@@ -16,5 +17,11 @@ router.post("/move-assets", moveAssetsController);
 
 // Route to delete asset by ID
 router.delete("/delete/:docId", deleteAssetByIdController);
+
+// Route to delete asset from cartAssets
+// router.delete("/delete/cart-assets/:docId", deleteAssetFromCartAssets);
+
+// Route to delete asset from cartBuyNow
+router.delete("/delete/:docId", deleteAssetFromCartBuyNow);
 
 export default router;

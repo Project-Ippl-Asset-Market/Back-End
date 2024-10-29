@@ -1,104 +1,165 @@
-// Import your dependencies
 import { db, midtrans } from "../config/firebaseConfig.js";
 
-// Controller for creating transactions and getting the Snap token
 export const createTransactionController = async (req, res) => {
   try {
-    console.log("Request body:", req.body); // Log for debugging
+    console.log("Body permintaan:", req.body);
 
-    const { orderId, grossAmount, customerDetails, assets, uid } = req.body;
+    const { orderId, grossAmount, customerDetails, assets, uid } = req.body; // Gunakan uid langsung dari request body
 
-    // Validate customerDetails
+    // Validasi detail pelanggan
     if (
       !customerDetails ||
       !customerDetails.fullName ||
       !customerDetails.email ||
       !customerDetails.phoneNumber
     ) {
-      console.error("Customer details not complete in request body");
+      console.error("Detail pelanggan tidak lengkap dalam body permintaan");
       return res.status(400).json({
-        message: "customerDetails, fullName, email, or phoneNumber not found",
+        message:
+          "customerDetails, fullName, email, atau phoneNumber tidak ditemukan",
       });
     }
 
-    // Validate assets
+    // Validasi aset
     if (!assets || !Array.isArray(assets) || assets.length === 0) {
-      console.error("Assets not provided or invalid");
-      return res.status(400).json({ message: "assets not found or invalid" });
+      console.error("Aset tidak disediakan atau tidak valid");
+      return res
+        .status(400)
+        .json({ message: "aset tidak ditemukan atau tidak valid" });
     }
 
-    // Ensure grossAmount is a number
+    // Pastikan grossAmount adalah angka
     const formattedGrossAmount = Number(grossAmount);
 
-    // Create item details array, ensuring prices are numbers
-    const itemDetails = assets.map((asset) => ({
-      id: asset.assetId,
-      price: Number(asset.price), // Convert price to number
-      name: asset.name || "Unknown Item", // Use a default name if not provided
-      quantity: 1, // Assuming quantity is always 1 for now; adjust as necessary
-      subtotal: Number(asset.price), // Calculate subtotal ensuring it's a number
-    }));
+    // Pembuatan array detail item, memastikan harga adalah angka
+    const itemDetails = assets.map((asset) => {
+      if (!asset.assetOwnerID) {
+        console.error(
+          `Asset dengan ID ${asset.assetId} tidak memiliki assetOwnerID.`
+        );
+        return res
+          .status(400)
+          .json({ message: "assetOwnerID tidak ditemukan di beberapa asset." });
+      }
 
-    // Sum up the subtotals to verify with gross amount
+      return {
+        id: asset.assetId,
+        uid: uid, // Gunakan uid dari body request
+        price: Number(asset.price),
+        name: {
+          nameAsset:
+            asset.name ||
+            item.audioName ||
+            item.asset2DName ||
+            item.asset3DName ||
+            item.datasetName ||
+            item.imageName ||
+            item.videoName ||
+            "name Found",
+        },
+        image:
+          asset.image ||
+          asset.video ||
+          asset.assetImageGame ||
+          "Tidak terditek",
+        quantity: 1,
+        subtotal: Number(asset.price),
+        description: asset.description,
+        category: asset.category,
+        userId: asset.userId,
+        assetOwnerID: asset.assetOwnerID,
+      };
+    });
+
+    // Jumlahkan subtotal untuk memverifikasi dengan gross amount
     const totalCalculated = itemDetails.reduce(
       (total, item) => total + item.subtotal,
       0
     );
 
-    // Check for gross amount mismatch
+    // Periksa ketidaksesuaian gross amount
     if (totalCalculated !== formattedGrossAmount) {
       console.error(
-        `Gross amount mismatch: expected ${totalCalculated}, but got ${formattedGrossAmount}`
+        `Ketidaksesuaian gross amount: diharapkan ${totalCalculated}, tetapi mendapatkan ${formattedGrossAmount}`
       );
       return res.status(400).json({
-        message: `Gross amount mismatch: expected ${totalCalculated}, but got ${formattedGrossAmount}`,
+        message: `Ketidaksesuaian gross amount: diharapkan ${totalCalculated}, tetapi mendapatkan ${formattedGrossAmount}`,
       });
     }
 
-    // Parameters for Midtrans transaction
+    // Tambahkan biaya transaksi sebesar 2500
+    const transactionFee = 2500;
+    const finalGrossAmount = formattedGrossAmount + transactionFee;
+
+    // Parameter untuk transaksi Midtrans
     const paymentParameters = {
       transaction_details: {
         order_id: orderId,
-        gross_amount: formattedGrossAmount,
+        gross_amount: finalGrossAmount,
       },
       customer_details: {
         full_name: customerDetails.fullName,
         email: customerDetails.email,
         phone: customerDetails.phoneNumber,
       },
-      item_details: itemDetails,
+      item_details: [
+        ...itemDetails,
+        {
+          id: "transaction_fee",
+          price: transactionFee,
+          name: "Biaya Transaksi",
+          quantity: 1,
+          subtotal: transactionFee,
+        },
+      ],
     };
 
-    // Create the transaction in Midtrans
+    // Buat transaksi di Midtrans
     const transaction = await midtrans.createTransaction(paymentParameters);
-    console.log("Transaction Response:", transaction);
+    console.log("Respon Transaksi:", transaction);
 
-    // Save transaction details to Firestore
-    await db
-      .collection("transactions")
-      .doc(orderId)
-      .set({
-        createdAt: new Date(),
-        orderId,
-        grossAmount: formattedGrossAmount,
-        customerDetails,
-        assets,
-        uid, // User ID
-        status: "pending", // Initial transaction status
-        token: transaction.token,
-        transactionId: transaction.transaction_id || null,
-        channel: transaction.channel || null,
-        source: transaction.source || null,
-        expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours expiry
-      });
+    // Simpan detail transaksi ke Firestore
+    const saveTransactionData = {
+      createdAt: new Date(),
+      orderId,
+      grossAmount: finalGrossAmount,
+      customerDetails,
+      assets: assets.map((asset) => ({
+        assetId: asset.assetId,
+        userId: asset.userId,
+        price: Number(asset.price),
+        image:
+          asset.image ||
+          asset.uploadUrlImage ||
+          asset.datasetImage ||
+          asset.assetAudiosImage ||
+          asset.uploadUrlVideo ||
+          asset.asset2DImage ||
+          asset.asset3DImage ||
+          "Tidak terditek",
+        description: asset.description,
+        category: asset.category,
+        assetOwnerID: asset.assetOwnerID,
+      })),
+      uid,
+      status: "Panding",
+      token: transaction.token,
+      expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
 
-    // Return the token to the client
+    console.log("Data transaksi yang akan disimpan:", saveTransactionData);
+
+    // Simpan ke Firestore
+    await db.collection("transactions").doc(orderId).set(saveTransactionData);
+
+    // Kembalikan token ke klien
     res.status(201).json({ token: transaction.token });
   } catch (error) {
-    console.error("Error creating transaction:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating transaction", error: error.message });
+    console.error("Kesalahan saat membuat transaksi:", error);
+    res.status(500).json({
+      message: "Kesalahan saat membuat transaksi",
+      error: error.message,
+    });
   }
 };
 
@@ -132,7 +193,7 @@ export const validateTransactionData = (req, res, next) => {
   // Validate input data
   if (
     !orderId ||
-    grossAmount < 0.01 || // Ensure gross amount is positive
+    grossAmount < 0.01 ||
     !customerDetails ||
     Object.keys(customerDetails).length === 0
   ) {

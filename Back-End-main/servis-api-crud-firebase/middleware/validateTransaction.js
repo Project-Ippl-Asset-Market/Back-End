@@ -1,17 +1,22 @@
 // middlewares/validateTransaction.js
 export const validateTransactionData = (req, res, next) => {
-  const { orderId, grossAmount, customerDetails } = req.body;
+  const { orderId, grossAmount, customerDetails, assets } = req.body;
+  const adminFee = 2500;
 
   // Validasi data
   if (
     !orderId ||
-    grossAmount < 0.01 ||
+    !grossAmount ||
+    grossAmount < adminFee + 0.01 ||
     !customerDetails ||
-    Object.keys(customerDetails).length === 0
+    Object.keys(customerDetails).length === 0 ||
+    !assets ||
+    !Array.isArray(assets) ||
+    assets.length === 0
   ) {
     return res.status(400).json({
       message:
-        "Invalid input: orderId, grossAmount, and customerDetails are required and grossAmount must be greater than or equal to 0.01.",
+        "Invalid input: orderId, grossAmount, customerDetails, and assets are required. Gross amount must be greater than admin fee.",
     });
   }
 

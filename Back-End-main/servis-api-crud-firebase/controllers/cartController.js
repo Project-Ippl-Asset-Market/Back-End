@@ -27,7 +27,7 @@ export const addToCartController = async (req, res) => {
     }
 
     const assetData = assetDoc.data();
-    const assetOwnerId = assetData.ownerId; // Field di dokumen aset yang menyimpan ID pemilik
+    const assetOwnerId = assetData.userId; // Gunakan userId sebagai pemilik asli aset
 
     // Asumsikan req.userId diisi oleh middleware otentikasi sebelumnya
     const userId = req.userId; // Mengambil ID pengguna dari sesi atau token
@@ -40,10 +40,11 @@ export const addToCartController = async (req, res) => {
       });
     }
 
-    // Tambahkan aset ke dalam keranjang
+    // Tambahkan aset ke dalam keranjang dengan informasi userId lama (pemilik asli)
     await db.collection("cartAssets").doc(assetId).set({
       assetId,
       addedBy: userId,
+      ownerId: assetOwnerId, // Menyimpan userId lama pemilik asli
       createdAt: new Date(),
     });
 

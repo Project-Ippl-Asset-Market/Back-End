@@ -167,7 +167,7 @@ export const moveAssetsController = async (req, res) => {
   }
 };
 
-// Function to delete asset by assetId
+// Controller to delete asset by ID from cartAssets
 export const deleteAssetByIdController = async (req, res) => {
   const { docId } = req.params;
 
@@ -176,17 +176,52 @@ export const deleteAssetByIdController = async (req, res) => {
     const assetDoc = await assetRef.get();
 
     if (!assetDoc.exists) {
-      return res.status(404).json({ message: "Asset tidak ditemukan" });
+      return res
+        .status(404)
+        .json({ message: "Asset tidak ditemukan di cartAssets" });
     }
 
+    // Hapus asset dari cartAssets
     await assetRef.delete();
-    console.log(`Successfully deleted asset with docId: ${docId}`);
+    console.log(
+      `Successfully deleted asset from cartAssets with docId: ${docId}`
+    );
 
-    res.status(200).json({ message: "Asset berhasil dihapus" });
+    res.status(200).json({ message: "Asset berhasil dihapus dari cartAssets" });
   } catch (error) {
-    console.error("Error deleting asset:", error);
+    console.error("Error deleting asset from cartAssets:", error);
     res.status(500).json({
-      message: "Terjadi kesalahan saat menghapus asset",
+      message: "Terjadi kesalahan saat menghapus asset dari cartAssets",
+      error: error.message,
+    });
+  }
+};
+
+// Controller to delete asset by ID from cartBuyNow
+export const deleteAssetFromCartBuyNow = async (req, res) => {
+  const { docId } = req.params;
+
+  try {
+    const cartBuyNowRef = db.collection("buyNow").doc(docId);
+    const cartDoc = await cartBuyNowRef.get();
+
+    if (!cartDoc.exists) {
+      return res
+        .status(404)
+        .json({ message: "Asset tidak ditemukan di buyNow" });
+    }
+
+    // Hapus asset dari cartBuyNow
+    await cartBuyNowRef.delete();
+    console.log(
+      `Successfully deleted asset from cartBuyNow with docId: ${docId}`
+    );
+
+    res.status(200).json({ message: "Asset berhasil dihapus dari buyNow" });
+  } catch (error) {
+    console.error("Error deleting asset from cartBuyNow:", error);
+    res.status(500).json({
+      message: "Terjadi kesalahan saat menghapus asset dari buyNow",
       error: error.message,
     });
   }
