@@ -130,14 +130,19 @@ export const createTransactionController = async (req, res) => {
         price: Number(asset.price),
         image:
           asset.image ||
+          asset.Image_umum ||
           asset.uploadUrlImage ||
           asset.datasetImage ||
           asset.assetAudiosImage ||
           asset.uploadUrlVideo ||
           asset.asset2DImage ||
           asset.asset3DImage ||
+          asset.datasetThumbnail ||
+          asset.asset2DThumbnail ||
+          asset.asset3DThumbnail ||
           "Tidak terditek",
         description: asset.description,
+        datasetFile: asset.datasetFile,
         category: asset.category,
         assetOwnerID: asset.assetOwnerID,
       })),
