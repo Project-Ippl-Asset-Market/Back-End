@@ -13,6 +13,7 @@ import assetRoutes from "./routes/assetRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import checkAssetRoutes from "./routes/checkAssetRoutes.js";
 import loginController from "./controllers/loginController.js";
+import fetch from "node-fetch";
 
 const app = express();
 const port = 3000;
@@ -40,6 +41,30 @@ app.use("/api/assets", assetRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/checkAsset", checkAssetRoutes);
 app.post("/api/logins", loginController);
+
+// proxy preview dataset
+app.get("/api/proxy-file", async (req, res) => {
+  const fileUrl = req.query.url; // URL file Firebase Storage
+
+  try {
+    if (!fileUrl) {
+      return res.status(400).send("File URL is required.");
+    }
+
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      return res.status(response.status).send(`Failed to fetch file: ${response.statusText}`);
+    }
+
+    res.set("Content-Type", response.headers.get("content-type"));
+    response.body.pipe(res);
+    
+  } catch (error) {
+    console.error("Error proxying file:", error);
+    res.status(500).send("Internal Server Error.");
+  }
+});
+
 
 // Menangani kesalahan (opsional, untuk penanganan kesalahan yang lebih baik)
 app.use((err, req, res, next) => {
