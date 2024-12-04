@@ -13,6 +13,7 @@ import assetRoutes from "./routes/assetRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import checkAssetRoutes from "./routes/checkAssetRoutes.js";
 import loginController from "./controllers/loginController.js";
+import myAssetRoutes from "./routes/myAssetRoutes.js";
 
 const app = express();
 const port = 3000;
@@ -40,6 +41,8 @@ app.use("/api/assets", assetRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/checkAsset", checkAssetRoutes);
 app.post("/api/logins", loginController);
+// app.use("/api/myAssets", myAssetRoutes);
+app.use(myAssetRoutes);
 
 // Menangani kesalahan (opsional, untuk penanganan kesalahan yang lebih baik)
 app.use((err, req, res, next) => {
