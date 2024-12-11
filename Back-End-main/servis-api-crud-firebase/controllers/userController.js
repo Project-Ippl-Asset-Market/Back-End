@@ -93,7 +93,7 @@ export const updateUser = async (req, res) => {
 
     // Update di Firestore (tanpa menyimpan password)
     await db.collection("users").doc(id).update(updateData);
-    console.log(`Pengguna dengan ID ${id} berhasil diuptodate.`);
+    // console.log(`Pengguna dengan ID ${id} berhasil diuptodate.`);
 
     // Data untuk update di Firebase Auth
     const authUpdateData = {
@@ -169,7 +169,6 @@ export const deleteUser = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Ambil data user dari Firestore untuk mendapatkan UID dan URL gambar
     const userRef = db.collection("users").doc(id);
     const userDoc = await userRef.get();
 
@@ -184,7 +183,6 @@ export const deleteUser = async (req, res) => {
     // Cek keberadaan pengguna di Firebase Authentication
     try {
       const userRecord = await auth.getUser(uid);
-      // Hapus pengguna dari Firebase Authentication
       await auth.deleteUser(uid);
     } catch (err) {
       if (err.code === "auth/user-not-found") {
@@ -200,7 +198,7 @@ export const deleteUser = async (req, res) => {
       const bucket = getStorage().bucket();
       const fileName = decodeURIComponent(
         profileImageUrl.split("/").pop().split("?")[0].split("%2F")[1]
-      ); // Ambil nama file dari URL
+      );
       const filePath = `images-user/${fileName}`;
 
       try {
@@ -208,7 +206,6 @@ export const deleteUser = async (req, res) => {
       } catch (err) {}
     }
 
-    // Hapus user dari Firestore
     await userRef.delete();
 
     res.status(204).send();

@@ -21,7 +21,6 @@ export const checkEmail = async (req, res) => {
   }
 };
 
-// Fungsi untuk memeriksa apakah email terdaftar dengan metode POST
 export const checkEmailPost = async (req, res) => {
   const { email } = req.body;
 

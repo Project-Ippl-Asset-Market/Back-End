@@ -1,4 +1,3 @@
-// /routes/userRoutes.js
 import express from "express";
 import multer from "multer";
 import {
@@ -11,8 +10,6 @@ import {
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
-
-// CRUD routes for users
 router.get("/", getAllUsers);
 router.post("/", createUser);
 router.get("/:id", getUserById);

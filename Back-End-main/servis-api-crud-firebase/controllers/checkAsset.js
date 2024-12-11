@@ -1,11 +1,8 @@
-// controllers/checkAsset.js
 import { db } from "../config/firebaseConfig.js";
 
-// Function to check asset ownership based on UID and asset ID
 export const checkAssetByUid = async (req, res) => {
   const { uid, assetId } = req.body;
 
-  // Validate input
   if (!uid || !assetId) {
     return res.status(400).json({
       message: "Input tidak valid: UID dan assetId harus disediakan.",
@@ -13,7 +10,6 @@ export const checkAssetByUid = async (req, res) => {
   }
 
   try {
-    // Collections to check for the asset
     const assetCollections = [
       "assetAudios",
       "assetImages",
@@ -23,31 +19,27 @@ export const checkAssetByUid = async (req, res) => {
       "assetVideos",
     ];
 
-    // Initialize variables to track asset ownership and existence
     let isAssetOwner = false;
     let assetFound = false;
 
-    // Check in each collection for the asset
     for (const collection of assetCollections) {
       const assetDoc = await db.collection(collection).doc(assetId).get();
       if (assetDoc.exists) {
-        assetFound = true; // Mark asset as found
-        const assetOwnerUid = assetDoc.data().uid; // Get the UID of the asset owner
+        assetFound = true;
+        const assetOwnerUid = assetDoc.data().uid;
         if (assetOwnerUid === uid) {
-          isAssetOwner = true; // Mark the user as the owner of the asset
+          isAssetOwner = true;
         }
-        break; // Stop searching once we find the asset
+        break;
       }
     }
 
-    // Asset not found
     if (!assetFound) {
       return res.status(404).json({
         message: "Aset tidak ditemukan.",
       });
     }
 
-    // Check ownership and respond accordingly
     if (isAssetOwner) {
       return res.status(200).json({
         message: "Anda adalah pemilik aset.",

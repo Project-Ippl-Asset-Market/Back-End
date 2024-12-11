@@ -1,9 +1,9 @@
-import { db, midtrans } from "../config/firebaseConfig.js";  
+import { db, midtrans } from "../config/firebaseConfig.js";
 
 // Endpoint for creating transactions and getting the Snap token
 export const createTransactionController = async (req, res) => {
   try {
-    console.log("Request body:", req.body);  
+    // console.log("Request body:", req.body);
 
     const { orderId, grossAmount, customerDetails, assets, uid } = req.body;
 
@@ -37,7 +37,7 @@ export const createTransactionController = async (req, res) => {
       price: asset.price,
       quantity: asset.quantity,
       name: asset.name,
-      subtotal: asset.price * asset.quantity, 
+      subtotal: asset.price * asset.quantity,
     }));
 
     // Sum up the subtotals to verify with gross amount
@@ -65,14 +65,12 @@ export const createTransactionController = async (req, res) => {
         email: customerDetails.email,
         phone: customerDetails.phone,
       },
-      item_details: itemDetails,  
+      item_details: itemDetails,
     };
 
-    // Create the transaction in Midtrans
     const transaction = await midtrans.createTransaction(parameter);
-    console.log("Transaction Response:", transaction);
+    // console.log("Transaction Response:", transaction);
 
-    // Save transaction details to Firestore
     await db
       .collection("transactions")
       .doc(orderId)
@@ -81,17 +79,16 @@ export const createTransactionController = async (req, res) => {
         orderId: orderId,
         grossAmount: formattedGrossAmount,
         customerDetails: customerDetails,
-        assets: assets,  
-        uid: uid,  
-        status: "pending",  
+        assets: assets,
+        uid: uid,
+        status: "pending",
         token: transaction.token,
         transactionId: transaction.transaction_id || null,
         channel: transaction.channel || null,
         source: transaction.source || null,
-        expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000),  
+        expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
 
-    // Return the token to the client
     res.status(201).json({ token: transaction.token });
   } catch (error) {
     console.error("Error creating transaction:", error);
@@ -101,7 +98,6 @@ export const createTransactionController = async (req, res) => {
   }
 };
 
-// Endpoint for updating transaction status
 export const updateTransactionController = async (req, res) => {
   try {
     const { orderId, status } = req.body;

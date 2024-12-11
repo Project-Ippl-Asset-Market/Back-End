@@ -10,11 +10,9 @@ import {
 
 const router = express.Router();
 
-// Setup multer
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// CRUD routes for admins
 router.get("/", getAllAdmins);
 router.post("/", createAdmin);
 router.get("/:id", getAdminById);

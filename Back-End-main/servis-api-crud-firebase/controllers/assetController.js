@@ -1,6 +1,5 @@
 import { db } from "../config/firebaseConfig.js";
 
-// Function to view asset by assetId
 export const getAssetByIdController = async (req, res) => {
   const { assetId } = req.params;
 
@@ -94,11 +93,9 @@ export const getAssetByIdController = async (req, res) => {
 //   }
 // };
 
-// Fungsi untuk memindahkan aset
 export const moveAssetsController = async (req, res) => {
   const { uid, assets } = req.body;
 
-  // Validasi input
   if (!uid || !Array.isArray(assets) || assets.length === 0) {
     return res.status(400).json({
       message: "Invalid input: uid and assets are required.",
@@ -109,7 +106,6 @@ export const moveAssetsController = async (req, res) => {
     const batch = db.batch();
 
     for (const asset of assets) {
-      // Validasi assetId
       if (!asset.assetId) {
         return res.status(400).json({
           message: `Invalid asset: ${JSON.stringify(
@@ -118,7 +114,6 @@ export const moveAssetsController = async (req, res) => {
         });
       }
 
-      // Cek apakah aset sudah dibeli
       const boughtAssetDoc = await db
         .collection("buyAssets")
         .doc(asset.assetId)
@@ -181,7 +176,6 @@ export const deleteAssetByIdController = async (req, res) => {
         .json({ message: "Asset tidak ditemukan di cartAssets" });
     }
 
-    // Hapus asset dari cartAssets
     await assetRef.delete();
     console.log(
       `Successfully deleted asset from cartAssets with docId: ${docId}`
@@ -211,7 +205,6 @@ export const deleteAssetFromCartBuyNow = async (req, res) => {
         .json({ message: "Asset tidak ditemukan di buyNow" });
     }
 
-    // Hapus asset dari cartBuyNow
     await cartBuyNowRef.delete();
     console.log(
       `Successfully deleted asset from cartBuyNow with docId: ${docId}`

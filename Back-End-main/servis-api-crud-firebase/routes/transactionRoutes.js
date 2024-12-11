@@ -4,7 +4,7 @@ export const createTransactionController = async (req, res) => {
   try {
     console.log("Body permintaan:", req.body);
 
-    const { orderId, grossAmount, customerDetails, assets, uid } = req.body; // Gunakan uid langsung dari request body
+    const { orderId, grossAmount, customerDetails, assets, uid } = req.body;
 
     // Validasi detail pelanggan
     if (
@@ -28,10 +28,7 @@ export const createTransactionController = async (req, res) => {
         .json({ message: "aset tidak ditemukan atau tidak valid" });
     }
 
-    // Pastikan grossAmount adalah angka
     const formattedGrossAmount = Number(grossAmount);
-
-    // Pembuatan array detail item, memastikan harga adalah angka
     const itemDetails = assets.map((asset) => {
       if (!asset.assetOwnerID) {
         console.error(
@@ -44,7 +41,7 @@ export const createTransactionController = async (req, res) => {
 
       return {
         id: asset.assetId,
-        uid: uid, // Gunakan uid dari body request
+        uid: uid,
         price: Number(asset.price),
         name: {
           nameAsset:
@@ -71,13 +68,11 @@ export const createTransactionController = async (req, res) => {
       };
     });
 
-    // Jumlahkan subtotal untuk memverifikasi dengan gross amount
     const totalCalculated = itemDetails.reduce(
       (total, item) => total + item.subtotal,
       0
     );
 
-    // Periksa ketidaksesuaian gross amount
     if (totalCalculated !== formattedGrossAmount) {
       console.error(
         `Ketidaksesuaian gross amount: diharapkan ${totalCalculated}, tetapi mendapatkan ${formattedGrossAmount}`
@@ -87,11 +82,8 @@ export const createTransactionController = async (req, res) => {
       });
     }
 
-    // Tambahkan biaya transaksi sebesar 2500
     const transactionFee = 2500;
     const finalGrossAmount = formattedGrossAmount + transactionFee;
-
-    // Parameter untuk transaksi Midtrans
     const paymentParameters = {
       transaction_details: {
         order_id: orderId,
@@ -114,11 +106,8 @@ export const createTransactionController = async (req, res) => {
       ],
     };
 
-    // Buat transaksi di Midtrans
     const transaction = await midtrans.createTransaction(paymentParameters);
     console.log("Respon Transaksi:", transaction);
-
-    // Simpan detail transaksi ke Firestore
     const saveTransactionData = {
       createdAt: new Date(),
       orderId,
@@ -213,17 +202,13 @@ export const validateTransactionData = (req, res, next) => {
 
 // Express Router Setup
 import express from "express";
-
 const router = express.Router();
-
-// Route for creating transactions with validation
 router.post(
   "/create-transaction",
   validateTransactionData,
   createTransactionController
 );
 
-// Route for updating transaction status
 router.put("/update-transaction", updateTransactionController);
 
 export default router;

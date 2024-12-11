@@ -5,12 +5,10 @@ import { v4 as uuidv4 } from "uuid";
 import { Storage } from "@google-cloud/storage";
 import admin from "firebase-admin";
 
-// Inisialisasi storage
 const storage = new Storage();
 const bucket = storage.bucket("my-asset-market.appspot.com");
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Get all admins
 export const getAllAdmins = async (req, res) => {
   try {
     const snapshot = await db.collection("admins").get();
@@ -24,7 +22,6 @@ export const getAllAdmins = async (req, res) => {
   }
 };
 
-// Create admin
 export const createAdmin = async (req, res) => {
   const { email, firstName, lastName, profileImageUrl, role, uid, username } =
     req.body;
@@ -48,7 +45,6 @@ export const createAdmin = async (req, res) => {
   }
 };
 
-// Get admin by ID
 export const getAdminById = async (req, res) => {
   const { id } = req.params;
 
@@ -76,7 +72,7 @@ export const updateAdmin = async (req, res) => {
     role,
     username,
     oldProfileImageUrl,
-    password, // Tambahkan field password
+    password,
   } = req.body;
   const file = req.file;
   let profileImageUrl;
@@ -90,14 +86,12 @@ export const updateAdmin = async (req, res) => {
       username,
     };
 
-    // Hapus nilai undefined
     Object.keys(updateData).forEach(
       (key) => updateData[key] === undefined && delete updateData[key]
     );
 
-    // Update di Firestore
     await db.collection("admins").doc(id).update(updateData);
-    console.log(`Admin dengan ID ${id} berhasil diperbarui di Firestore.`);
+    // console.log(`Admin dengan ID ${id} berhasil diperbarui di Firestore.`);
 
     // Update di Firebase Auth
     const authUpdateData = {
@@ -105,7 +99,7 @@ export const updateAdmin = async (req, res) => {
       displayName: `${firstName} ${lastName}`,
     };
     if (password) {
-      authUpdateData.password = password; // Tambahkan pembaruan kata sandi jika ada
+      authUpdateData.password = password;
     }
 
     await auth.updateUser(uid, authUpdateData);
@@ -113,7 +107,6 @@ export const updateAdmin = async (req, res) => {
       `Pengguna dengan UID ${uid} berhasil diperbarui di Firebase Auth.`
     );
 
-    // Jika ada file yang di-upload, simpan di Storage dan update URL di Firestore
     if (file) {
       const bucket = getStorage().bucket();
       const fileName = `${uuidv4()}_${file.originalname}`;
@@ -130,14 +123,12 @@ export const updateAdmin = async (req, res) => {
         },
       });
 
-      // Dapatkan URL download dengan token
       const [metadata] = await fileUpload.getMetadata();
       const token = metadata.metadata.firebaseStorageDownloadTokens;
       profileImageUrl = `https://firebasestorage.googleapis.com/v0/b/${
         bucket.name
       }/o/${encodeURIComponent(fileUpload.name)}?alt=media&token=${token}`;
 
-      // Update URL gambar di Firestore
       await db.collection("admins").doc(id).update({ profileImageUrl });
       console.log(`URL gambar diperbarui di Firestore: ${profileImageUrl}`);
 
@@ -145,7 +136,7 @@ export const updateAdmin = async (req, res) => {
       if (oldProfileImageUrl) {
         const oldFileName = decodeURIComponent(
           oldProfileImageUrl.split("/").pop().split("?")[0].split("%2F")[1]
-        ); // Ambil nama file dari URL
+        );
         const oldFilePath = `images-admin/${oldFileName}`;
         await bucket.file(oldFilePath).delete();
         console.log(
@@ -172,7 +163,6 @@ export const deleteAdmin = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // Ambil data admin dari Firestore untuk mendapatkan UID
     const adminRef = db.collection("admins").doc(id);
     const adminDoc = await adminRef.get();
 
@@ -183,10 +173,8 @@ export const deleteAdmin = async (req, res) => {
     const adminData = adminDoc.data();
     const uid = adminData.uid;
 
-    // Hapus pengguna dari Firebase Authentication
     await auth.deleteUser(uid);
 
-    // Hapus admin dari Firestore
     await adminRef.delete();
 
     res.status(204).send();

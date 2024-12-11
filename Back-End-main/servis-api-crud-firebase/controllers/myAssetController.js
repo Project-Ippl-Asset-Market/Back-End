@@ -15,6 +15,23 @@ export const downloadAndProcessFile = async (req, res) => {
     return res.status(400).json({ error: "URL file tidak diberikan" });
   }
 
+  const validSizes = [
+    "Original (6000x4000)",
+    "Large (1920x1280)",
+    "Medium (1280x1280)",
+    "Small (640x427)",
+    "SD (360x640)",
+    "SD (540x960)",
+    "HD (720x1280)",
+    "Full HD (1080x1920)",
+    "Quad HD (1440x2560)",
+    "4K UHD (2160x3840)",
+  ];
+
+  if (!validSizes.includes(size)) {
+    return res.status(400).json({ error: "Ukuran tidak valid" });
+  }
+
   try {
     const response = await fetch(fileUrl);
     if (!response.ok) {
@@ -37,31 +54,19 @@ export const downloadAndProcessFile = async (req, res) => {
     if (contentType.startsWith("image/")) {
       let processedImage = fileBuffer;
 
-      switch (size) {
-        case "Original (6000x4000)":
+      if (size !== "Original (6000x4000)") {
+        const dimensions = {
+          "Large (1920x1280)": { width: 1920, height: 1280 },
+          "Medium (1280x1280)": { width: 1280, height: 1280 },
+          "Small (640x427)": { width: 640, height: 427 },
+        };
+
+        const { width, height } = dimensions[size] || {};
+        if (width && height) {
           processedImage = await sharp(fileBuffer)
-            .resize(6000, 4000)
+            .resize(width, height)
             .toBuffer();
-          break;
-
-        case "Large (1920x1280)":
-          processedImage = await sharp(fileBuffer)
-            .resize(1920, 1280)
-            .toBuffer();
-          break;
-
-        case "Medium (1280x1280)":
-          processedImage = await sharp(fileBuffer)
-            .resize(1280, 1280)
-            .toBuffer();
-          break;
-
-        case "Small (640x427)":
-          processedImage = await sharp(fileBuffer).resize(640, 427).toBuffer();
-          break;
-
-        default:
-          console.log("No matching size for image. Returning original.");
+        }
       }
 
       res.setHeader("Content-Type", contentType || "application/octet-stream");
@@ -74,51 +79,28 @@ export const downloadAndProcessFile = async (req, res) => {
       const localPath = path.resolve("./localVideo.mp4");
       fs.writeFileSync(localPath, fileBuffer);
 
-      let resolution = null;
-      switch (size) {
-        case "SD (360x640)":
-          resolution = "640x360";
-          break;
-        case "SD (540x960)":
-          resolution = "960x540";
-          break;
-        case "HD (720x1280)":
-          resolution = "1280x720";
-          break;
-        case "Full HD (1080x1920)":
-          resolution = "1920x1080";
-          break;
-        case "Quad HD (1440x2560)":
-          resolution = "2560x1440";
-          break;
-        case "4K UHD (2160x3840)":
-          resolution = "3840x2160";
-          break;
-        default:
-          console.log("No video size manipulation.");
-      }
+      const resolutionMapping = {
+        "SD (360x640)": "640x360",
+        "SD (540x960)": "960x540",
+        "HD (720x1280)": "1280x720",
+        "Full HD (1080x1920)": "1920x1080",
+        "Quad HD (1440x2560)": "2560x1440",
+        "4K UHD (2160x3840)": "3840x2160",
+      };
 
+      const resolution = resolutionMapping[size] || null;
       const localOutputPath = path.resolve("./localOutput.mp4");
+
       const ffmpegProcess = ffmpeg(localPath);
       if (resolution) {
         ffmpegProcess.outputOptions([
-          `-vf`,
-          `scale=${resolution.split("x").join(":")}`,
+          `-vf scale=${resolution.split("x").join(":")}`,
+          "-preset fast",
         ]);
       }
 
       ffmpegProcess
         .output(localOutputPath)
-        .on("start", () => {})
-        .on("error", (err) => {
-          console.error("FFmpeg error:", err.message);
-          fs.unlinkSync(localPath);
-          if (fs.existsSync(localOutputPath)) fs.unlinkSync(localOutputPath);
-          return res.status(500).json({
-            error: "Kesalahan saat memproses video",
-            message: err.message,
-          });
-        })
         .on("end", () => {
           res.setHeader(
             "Content-Type",
@@ -136,13 +118,6 @@ export const downloadAndProcessFile = async (req, res) => {
           });
         })
         .run();
-    } else {
-      res.setHeader("Content-Type", contentType || "application/octet-stream");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${fileName}.${fileExtension}"`
-      );
-      return res.send(fileBuffer);
     }
   } catch (error) {
     console.error("Error:", error.message);
