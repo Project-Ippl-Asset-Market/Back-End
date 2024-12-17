@@ -5,6 +5,8 @@ import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import dotenv from "dotenv";
 import midtransClient from "midtrans-client";
+import "firebase/auth";
+
 
 dotenv.config();
 

@@ -1,74 +1,13 @@
 // controller/userController.js
-import { db, auth, storage } from "../config/firebaseConfig.js";
+import { db, auth } from "../config/firebaseConfig.js";
+import { getStorage } from "firebase-admin/storage";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
-import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 // Setup multer
 const upload = multer({ storage: multer.memoryStorage() });
 
-
-// Fungsi untuk login pengguna
-export const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    const adminRef = db.collection("admins").where("email", "==", email);
-    const adminSnapshot = await adminRef.get();
-
-    let userData;
-    let role;
-    let uid; 
-
-    if (!adminSnapshot.empty) {
-      const adminDoc = adminSnapshot.docs[0];
-      userData = adminDoc.data();
-      role = userData.role; 
-      uid = adminDoc.id; 
-    } else {
-      const userRef = db.collection("users").where("email", "==", email);
-      const userSnapshot = await userRef.get();
-
-      if (userSnapshot.empty) {
-        return res.status(404).json({ error: "Pengguna tidak ditemukan" });
-      }
-
-      const userDoc = userSnapshot.docs[0]; 
-      userData = userDoc.data();
-      role = "user"; 
-      uid = userDoc.id; 
-    }
-    const token = jwt.sign(
-      {
-        email: userData.email,
-        role: role,
-        uid: uid,
-        name: userData.firstName + " " + userData.lastName, 
-        picture: userData.photoURL || userData.profileImageUrl, 
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" } 
-    );
-    res.status(200).json({
-      token: token,
-      user: {
-        email: userData.email,
-        role,
-        uid,
-        name: userData.firstName + " " + userData.lastName, 
-        picture: userData.photoURL || userData.profileImageUrl, 
-      },
-    });
-  } catch (error) {
-    console.error("Error saat login:", error);
-    res.status(500).json({ error: "Kesalahan Internal Server" });
-  }
-};
-
-// Ambil semua pengguna
+// Get all users
 export const getAllUsers = async (req, res) => {
   try {
     const snapshot = await db.collection("users").get();
@@ -79,21 +18,13 @@ export const getAllUsers = async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error("Error fetching users:", error);
-    res.status(500).json({ error: "Kesalahan Internal Server" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// Buat pengguna
+// Create user
 export const createUser = async (req, res) => {
-  const {
-    uid,
-    firstName,
-    lastName,
-    email,
-    username,
-    password,
-    role = "user",
-  } = req.body; // Default role adalah "user"
+  const { uid, firstName, lastName, email, username, password } = req.body;
 
   try {
     const newUser = {
@@ -104,18 +35,17 @@ export const createUser = async (req, res) => {
       username,
       password,
       profileImageUrl: req.file ? null : "default_profile_image_url",
-      role, // Sertakan role di sini
       createdAt: new Date(),
     };
     const userRef = await db.collection("users").add(newUser);
     res.status(201).json({ id: userRef.id, ...newUser });
   } catch (error) {
-    console.error("Error saat membuat pengguna:", error);
-    res.status(500).json({ error: "Kesalahan Internal Server" });
+    console.error("Error creating user:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// Ambil pengguna berdasarkan ID
+// Get user by ID
 export const getUserById = async (req, res) => {
   const { id } = req.params;
 
@@ -124,17 +54,17 @@ export const getUserById = async (req, res) => {
     const doc = await userRef.get();
 
     if (!doc.exists) {
-      return res.status(404).json({ error: "Pengguna tidak ditemukan" });
+      return res.status(404).json({ error: "User not found" });
     }
 
     res.json({ id: doc.id, ...doc.data() });
   } catch (error) {
     console.error("Error fetching user:", error);
-    res.status(500).json({ error: "Kesalahan Internal Server" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// Update pengguna
+// Update user
 export const updateUser = async (req, res) => {
   const { id } = req.params;
   const {
@@ -164,6 +94,7 @@ export const updateUser = async (req, res) => {
 
     // Update di Firestore (tanpa menyimpan password)
     await db.collection("users").doc(id).update(updateData);
+    // console.log(`Pengguna dengan ID ${id} berhasil diuptodate.`);
 
     // Data untuk update di Firebase Auth
     const authUpdateData = {
@@ -177,10 +108,13 @@ export const updateUser = async (req, res) => {
 
     // Update di Firebase Auth
     await auth.updateUser(uid, authUpdateData);
+    console.log(
+      `Pengguna dengan UID ${uid} berhasil diperbarui di Firebase Auth.`
+    );
 
     // Jika ada file yang di-upload, simpan di Storage dan update URL di Firestore
     if (file) {
-      const bucket = storage.bucket();
+      const bucket = getStorage().bucket();
       const fileName = `${uuidv4()}_${file.originalname}`;
       const fileUpload = bucket.file(`images-user/${fileName}`);
 
@@ -212,6 +146,9 @@ export const updateUser = async (req, res) => {
         ); // Ambil nama file dari URL
         const oldFilePath = `images-user/${oldFileName}`;
         await bucket.file(oldFilePath).delete();
+        console.log(
+          `Gambar lama berhasil dihapus dari Storage: ${oldFilePath}`
+        );
       }
     }
 
@@ -224,11 +161,11 @@ export const updateUser = async (req, res) => {
     console.error("Error updating user:", error);
     res
       .status(500)
-      .json({ error: "Kesalahan Internal Server", details: error.message });
+      .json({ error: "Internal Server Error", details: error.message });
   }
 };
 
-// Hapus pengguna
+// Delete user
 export const deleteUser = async (req, res) => {
   const { id } = req.params;
 
@@ -237,7 +174,7 @@ export const deleteUser = async (req, res) => {
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({ error: "Pengguna tidak ditemukan" });
+      return res.status(404).json({ error: "User not found" });
     }
 
     const userData = userDoc.data();
@@ -253,13 +190,13 @@ export const deleteUser = async (req, res) => {
       } else {
         return res
           .status(500)
-          .json({ error: "Kesalahan Internal Server", details: err.message });
+          .json({ error: "Internal Server Error", details: err.message });
       }
     }
 
     // Hapus gambar dari Firebase Storage jika ada
     if (profileImageUrl) {
-      const bucket = storage.bucket();
+      const bucket = getStorage().bucket();
       const fileName = decodeURIComponent(
         profileImageUrl.split("/").pop().split("?")[0].split("%2F")[1]
       );
@@ -276,6 +213,6 @@ export const deleteUser = async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ error: "Kesalahan Internal Server", details: error.message });
+      .json({ error: "Internal Server Error", details: error.message });
   }
 };
