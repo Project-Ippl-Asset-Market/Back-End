@@ -47,7 +47,7 @@ export const loginUser = async (req, res) => {
         role: role,
         uid: uid,
         name: userData.firstName + " " + userData.lastName, 
-        picture: userData.photoURL || userData.profileImageUrl, 
+        image: userData.photoURL || userData.profileImageUrl, 
       },
       process.env.JWT_SECRET,
       { expiresIn: "1h" } 
@@ -59,7 +59,7 @@ export const loginUser = async (req, res) => {
         role,
         uid,
         name: userData.firstName + " " + userData.lastName, 
-        picture: userData.photoURL || userData.profileImageUrl, 
+        image: userData.photoURL || userData.profileImageUrl, 
       },
     });
   } catch (error) {
