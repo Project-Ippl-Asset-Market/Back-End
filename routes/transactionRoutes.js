@@ -1,5 +1,29 @@
 import { db, midtrans } from "../config/firebaseConfig.js";
 
+// Fungsi untuk memindahkan aset dari cartAssets ke buyAssets
+const moveAssetsToBuyAssets = async (assets) => {
+  const buyAssetsPromises = assets.map(async (asset) => {
+    const newAsset = {
+      assetId: asset.assetId,
+      price: Number(asset.price),
+      name: asset.name,
+      image: asset.image || "Tidak terditek",
+      datasetFile: asset.datasetFile || "tidak ada",
+      userId: asset.userId,
+      description: asset.description,
+      category: asset.category,
+      assetOwnerID: asset.assetOwnerID,
+      size: asset.size || asset.resolution || "size & Resolution tidak ada",
+      createdAt : new Date(),
+    };
+
+    // Simpan aset ke koleksi buyAssets
+    await db.collection("buyAssets").doc(asset.assetId).set(newAsset);
+  });
+
+  await Promise.all(buyAssetsPromises);
+};
+
 export const createTransactionController = async (req, res) => {
   try {
     console.log("Body permintaan:", req.body);
@@ -46,12 +70,12 @@ export const createTransactionController = async (req, res) => {
         name: {
           nameAsset:
             asset.name ||
-            item.audioName ||
-            item.asset2DName ||
-            item.asset3DName ||
-            item.datasetName ||
-            item.imageName ||
-            item.videoName ||
+            asset.audioName ||
+            asset.asset2DName ||
+            asset.asset3DName ||
+            asset.datasetName ||
+            asset.imageName ||
+            asset.videoName ||
             "name Found",
         },
         image:
@@ -136,7 +160,7 @@ export const createTransactionController = async (req, res) => {
         assetOwnerID: asset.assetOwnerID,
       })),
       uid,
-      status: "Panding",
+      status: "Pending", // Ubah status dari "Panding" ke "Pending"
       token: transaction.token,
       expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
@@ -145,6 +169,9 @@ export const createTransactionController = async (req, res) => {
 
     // Simpan ke Firestore
     await db.collection("transactions").doc(orderId).set(saveTransactionData);
+
+    // **NEW**: Pindahkan aset ke buyAssets setelah transaksi berhasil
+    await moveAssetsToBuyAssets(assets);
 
     // Kembalikan token ke klien
     res.status(201).json({ token: transaction.token });

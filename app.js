@@ -14,9 +14,12 @@ import checkAssetRoutes from "./routes/checkAssetRoutes.js";
 import loginController from "./controllers/loginController.js";
 import myAssetRoutes from "./routes/myAssetRoutes.js";
 import moveAsset from "./routes/moveRoutes.js";
+import revenueRoutes from "./routes/revenueRoutes.js";
+import fetch from "node-fetch";
 
 const app = express();
 const port = 3000;
+const HOST = "0.0.0.0";
 
 // Menangani kesalahan (opsional, untuk penanganan kesalahan yang lebih baik)
 app.use((err, req, res, next) => {
@@ -30,7 +33,17 @@ app.use((err, req, res, next) => {
 });
 
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:5173" }));
+
+const allowedOrigins = ["http://localhost:5173", "http://tugas.uniba-bpn.ac.id:5173"];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  }
+}));
 
 // Gunakan rute
 app.use("/api/users", userRoutes);
@@ -45,6 +58,35 @@ app.post("/api/logins", loginController);
 app.use("/api", moveAsset);
 app.use(myAssetRoutes);
 
+app.use("/api/revenue",revenueRoutes);
+
+app.get("/api/proxy-file", async (req, res) => {
+  const fileUrl = (req.query.url);
+
+  try {
+    if (!fileUrl) {
+      return res.status(400).send("File URL is required.");
+    }
+
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      return res.status(response.status).send(`Failed to fetch file: ${response.statusText}`);
+    }
+
+    res.set("Content-Type", response.headers.get("content-type"));
+    response.body.pipe(res); 
+
+  } catch (error) {
+    console.error("Error proxying file:", error);
+    res.status(500).send("Internal Server Error.");
+  }
+});
+
+app.get("/hello-world", (req, res) => {
+  res.send("Hello, World!");
+});
+
+
 // Menangani kesalahan (opsional, untuk penanganan kesalahan yang lebih baik)
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -52,6 +94,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+app.listen(port, HOST, () => {
+  // console.log(`Server is running on port ${port}`);
+  console.log(`Server running at http://${HOST}:${port}`);
 });
