@@ -28,7 +28,7 @@ export const downloadAndProcessFile = async (req, res) => {
     "4K UHD (2160x3840)",
   ];
 
-  if (!validSizes.includes(size)) {
+  if (size && !validSizes.includes(size)) {
     return res.status(400).json({ error: "Ukuran tidak valid" });
   }
 
@@ -42,7 +42,18 @@ export const downloadAndProcessFile = async (req, res) => {
 
     const contentType = response.headers.get("content-type");
     const fileName = fileUrl.split("/").pop().split("?")[0];
-    const fileBuffer = await response.buffer();
+    const arrayBuffer = await response.arrayBuffer();
+    const fileBuffer = Buffer.from(arrayBuffer); // Konversi ke Buffer
+
+    // Process .zip files 
+    if (fileName.includes(".zip")) {
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${fileName}"`
+      );
+      return res.send(fileBuffer);
+    }
 
     let fileExtension = "";
     if (contentType.startsWith("image/")) {
@@ -54,7 +65,7 @@ export const downloadAndProcessFile = async (req, res) => {
     if (contentType.startsWith("image/")) {
       let processedImage = fileBuffer;
 
-      if (size !== "Original (6000x4000)") {
+      if (size && size !== "Original (6000x4000)") {
         const dimensions = {
           "Large (1920x1280)": { width: 1920, height: 1280 },
           "Medium (1280x1280)": { width: 1280, height: 1280 },
@@ -127,3 +138,4 @@ export const downloadAndProcessFile = async (req, res) => {
     });
   }
 };
+
