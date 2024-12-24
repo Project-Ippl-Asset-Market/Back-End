@@ -14,6 +14,7 @@ import checkAssetRoutes from "./routes/checkAssetRoutes.js";
 import loginController from "./controllers/loginController.js";
 import myAssetRoutes from "./routes/myAssetRoutes.js";
 import moveAsset from "./routes/moveRoutes.js";
+import revenueRoutes from "./routes/revenueRoutes.js";
 
 const app = express();
 const port = 3000;
@@ -43,6 +44,7 @@ app.use("/api/checkAsset", checkAssetRoutes);
 app.post("/api/logins", loginController);
 // app.use("/api/myAssets", myAssetRoutes);
 app.use("/api", moveAsset);
+app.use("/api", revenueRoutes);
 app.use(myAssetRoutes);
 
 // Menangani kesalahan (opsional, untuk penanganan kesalahan yang lebih baik)

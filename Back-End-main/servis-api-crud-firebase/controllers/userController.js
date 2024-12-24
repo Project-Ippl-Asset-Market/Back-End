@@ -11,23 +11,24 @@ dotenv.config();
 const upload = multer({ storage: multer.memoryStorage() });
 
 
-// Fungsi untuk login pengguna
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const adminRef = db.collection("admins").where("email", "==", email);
-    const adminSnapshot = await adminRef.get();
-
     let userData;
     let role;
-    let uid; 
+    let uid;
+    let userId;
+    const adminRef = db.collection("admins").where("email", "==", email);
+    const adminSnapshot = await adminRef.get();
 
     if (!adminSnapshot.empty) {
       const adminDoc = adminSnapshot.docs[0];
       userData = adminDoc.data();
-      role = userData.role; 
-      uid = adminDoc.id; 
+      role = userData.role;
+      uid = userData.uid; 
+      userId = userData.uid;
+      // console.log("Admin ditemukan, UID:", uid); 
     } else {
       const userRef = db.collection("users").where("email", "==", email);
       const userSnapshot = await userRef.get();
@@ -36,16 +37,20 @@ export const loginUser = async (req, res) => {
         return res.status(404).json({ error: "Pengguna tidak ditemukan" });
       }
 
-      const userDoc = userSnapshot.docs[0]; 
+      const userDoc = userSnapshot.docs[0];
       userData = userDoc.data();
-      role = "user"; 
-      uid = userDoc.id; 
+      role = "user";  
+      uid = userData.uid;  
+      userId = userData.uid; 
+      // console.log("Pengguna ditemukan, UID:", uid); 
     }
+    // console.log("UID yang digunakan untuk token:", uid);
     const token = jwt.sign(
       {
         email: userData.email,
         role: role,
-        uid: uid,
+        uid: uid, 
+        userId: userId,  
         name: userData.firstName + " " + userData.lastName, 
         image: userData.photoURL || userData.profileImageUrl, 
       },
@@ -58,6 +63,7 @@ export const loginUser = async (req, res) => {
         email: userData.email,
         role,
         uid,
+        userId, 
         name: userData.firstName + " " + userData.lastName, 
         image: userData.photoURL || userData.profileImageUrl, 
       },
@@ -67,6 +73,7 @@ export const loginUser = async (req, res) => {
     res.status(500).json({ error: "Kesalahan Internal Server" });
   }
 };
+
 
 // Ambil semua pengguna
 export const getAllUsers = async (req, res) => {
