@@ -3,8 +3,6 @@ import { db, midtrans } from "../config/firebaseConfig.js";
 // Endpoint for creating transactions and getting the Snap token
 export const createTransactionController = async (req, res) => {
   try {
-    // console.log("Request body:", req.body);
-
     const { orderId, grossAmount, customerDetails, assets, uid } = req.body;
 
     // Validate customerDetails
@@ -69,8 +67,30 @@ export const createTransactionController = async (req, res) => {
     };
 
     const transaction = await midtrans.createTransaction(parameter);
-    // console.log("Transaction Response:", transaction);
+    console.log("Transaction Response:", transaction);
 
+    // Save assets to buyAssets collection
+    const buyAssetPromises = assets.map(async (asset) => {
+      const buyAssetDocRef = db.collection("buyAssets").doc(); // Create a new document
+      await buyAssetDocRef.set({
+        assetId: asset.assetId,
+        price: asset.price,
+        name: asset.name,
+        image: asset.image || "url tidak ada",
+        datasetFile: asset.datasetFile || "tidak ada",
+        userId: uid,
+        description: asset.description || "No Description",
+        category: asset.category || "Uncategorized",
+        assetOwnerID: asset.assetOwnerID || "Asset Owner ID Not Available",
+        size: asset.size || asset.resolution || "size & Resolution tidak ada",
+        createdAt: new Date(),
+        orderId: orderId, // Link to the order
+      });
+    });
+
+    await Promise.all(buyAssetPromises);
+
+    // Save transaction details to transactions collection
     await db
       .collection("transactions")
       .doc(orderId)
@@ -81,7 +101,7 @@ export const createTransactionController = async (req, res) => {
         customerDetails: customerDetails,
         assets: assets,
         uid: uid,
-        status: "pending",
+        status: "success",
         token: transaction.token,
         transactionId: transaction.transaction_id || null,
         channel: transaction.channel || null,
