@@ -11,6 +11,8 @@ process.removeAllListeners("warning");
 export const downloadAndProcessFile = async (req, res) => {
   const { fileUrl, size } = req.query;
 
+  console.log(`File URL yang diterima: ${fileUrl}`);
+
   if (!fileUrl) {
     return res.status(400).json({ error: "URL file tidak diberikan" });
   }
@@ -44,6 +46,15 @@ export const downloadAndProcessFile = async (req, res) => {
     const fileName = fileUrl.split("/").pop().split("?")[0];
     const arrayBuffer = await response.arrayBuffer();
     const fileBuffer = Buffer.from(arrayBuffer); // Konversi ke Buffer
+
+    if (contentType.startsWith("audio/")) {
+      res.setHeader("Content-Type", contentType || "application/octet-stream");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${fileName}"`
+      );
+      return res.send(fileBuffer);
+    }
 
     // Process .zip files 
     if (fileName.includes(".zip")) {
@@ -111,24 +122,45 @@ export const downloadAndProcessFile = async (req, res) => {
       }
 
       ffmpegProcess
-        .output(localOutputPath)
-        .on("end", () => {
-          res.setHeader(
-            "Content-Type",
-            contentType || "application/octet-stream"
-          );
-          res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="${fileName}.${fileExtension}"`
-          );
-
-          res.sendFile(localOutputPath, {}, (err) => {
-            fs.unlinkSync(localPath);
-            fs.unlinkSync(localOutputPath);
-            if (err) console.error("Error sending file:", err);
-          });
-        })
-        .run();
+      .output(localOutputPath)
+      .on("end", () => {
+        res.setHeader(
+          "Content-Type",
+          contentType || "application/octet-stream"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${fileName}.${fileExtension}"`
+        );
+    
+        res.sendFile(localOutputPath, {}, (err) => {
+          if (err) console.error("Error sending file:", err);
+    
+          // Delay unlinking to ensure the file is no longer in use
+          setTimeout(() => {
+            try {
+              if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+              if (fs.existsSync(localOutputPath)) fs.unlinkSync(localOutputPath);
+            } catch (error) {
+              console.error("Error deleting files:", error.message);
+            }
+          }, 500); // Adjust delay as necessary
+        });
+      })
+      .on("error", (err) => {
+        console.error("Error processing video with ffmpeg:", err);
+        // Clean up input file even if processing fails
+        setTimeout(() => {
+          try {
+            if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+          } catch (error) {
+            console.error("Error deleting input file:", error.message);
+          }
+        }, 500);
+        res.status(500).json({ error: "Video processing failed" });
+      })
+      .run();
+    
     }
   } catch (error) {
     console.error("Error:", error.message);
