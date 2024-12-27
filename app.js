@@ -15,6 +15,7 @@ import loginController from "./controllers/loginController.js";
 import myAssetRoutes from "./routes/myAssetRoutes.js";
 import moveAsset from "./routes/moveRoutes.js";
 import revenueRoutes from "./routes/revenueRoutes.js";
+import removeCart from "./routes/removeCartRoutes.js";
 import fetch from "node-fetch";
 
 const app = express();
@@ -56,9 +57,10 @@ app.use("/api/checkAsset", checkAssetRoutes);
 app.post("/api/logins", loginController);
 // app.use("/api/myAssets", myAssetRoutes);
 app.use("/api", moveAsset);
+app.use("/api", removeCart);
+app.use("/api", revenueRoutes);
 app.use(myAssetRoutes);
 
-app.use("/api/revenue",revenueRoutes);
 
 app.get("/api/proxy-file", async (req, res) => {
   const fileUrl = (req.query.url);

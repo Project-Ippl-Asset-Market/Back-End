@@ -151,7 +151,7 @@ export const updateAdmin = async (req, res) => {
       profileImageUrl: file ? profileImageUrl : oldProfileImageUrl,
     });
   } catch (error) {
-    console.error("Error updating admin:", error);
+       console.error("Error updating admin:", error);
     res
       .status(500)
       .json({ error: "Internal Server Error", details: error.message });
