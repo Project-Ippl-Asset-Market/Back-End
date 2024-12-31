@@ -1,136 +1,287 @@
 import { db, midtrans } from "../config/firebaseConfig.js";
 
-// Endpoint for creating transactions and getting the Snap token
 export const createTransactionController = async (req, res) => {
   try {
+    // console.log("Body permintaan:", req.body);
+
     const { orderId, grossAmount, customerDetails, assets, uid } = req.body;
 
-    // Validate customerDetails
+    // Validasi detail pelanggan
     if (
       !customerDetails ||
-      !customerDetails.full_name ||
+      !customerDetails.fullName ||
       !customerDetails.email ||
-      !customerDetails.phone
+      !customerDetails.phoneNumber
     ) {
-      console.error("Customer details not complete in request body");
+      console.error("Detail pelanggan tidak lengkap dalam body permintaan");
       return res.status(400).json({
-        message: "customerDetails, full_name, email, or phone not found",
+        message:
+          "customerDetails, fullName, email, atau phoneNumber tidak ditemukan",
       });
     }
 
-    // Validate assets
+    // Validasi aset
     if (!assets || !Array.isArray(assets) || assets.length === 0) {
-      console.error("Assets not provided or invalid");
-      return res.status(400).json({
-        message: "assets not found or invalid",
-      });
+      console.error("Aset tidak disediakan atau tidak valid");
+      return res
+        .status(400)
+        .json({ message: "aset tidak ditemukan atau tidak valid" });
     }
 
-    // Ensure grossAmount is correct
-    const formattedGrossAmount = Math.floor(grossAmount);
+    const formattedGrossAmount = Number(grossAmount);
+    const itemDetails = assets.map((asset) => {
+      if (!asset.assetOwnerID) {
+        console.error(
+          `Asset dengan ID ${asset.assetId} tidak memiliki assetOwnerID.`
+        );
+        return res
+          .status(400)
+          .json({ message: "assetOwnerID tidak ditemukan di beberapa asset." });
+      }
 
-    // Create item details array
-    const itemDetails = assets.map((asset) => ({
-      id: asset.id,
-      price: asset.price,
-      quantity: asset.quantity,
-      name: asset.name,
-      subtotal: asset.price * asset.quantity,
-    }));
+      return {
+        id: asset.assetId,
+        uid: uid,
+        price: Number(asset.price),
+        name: asset.name ||
+          asset.audioName ||
+          asset.asset2DName ||
+          asset.asset3DName ||
+          asset.datasetName ||
+          asset.imageName ||
+          asset.videoName ||
+          "name Found",
+        image:
+          asset.image ||
+          asset.Image_umum ||
+          asset.video ||
+          asset.assetImageGame || asset.audioThumbnail || asset.datasetThumbnail ||
+          asset.asset2DThumbnail ||
+          asset.asset3DThumbnail || "url tidak ada",
+        datasetFile: asset.datasetFile || asset.asset3DFile || asset.asset2DFile || asset.uploadUrlAudio || "tidak ada",
+        quantity: 1,
+        subtotal: Number(asset.price),
+        description: asset.description,
+        category: asset.category,
+        userId: asset.userId,
+        assetOwnerID: asset.assetOwnerID,
+      };
+    });
 
-    // Sum up the subtotals to verify with gross amount
     const totalCalculated = itemDetails.reduce(
       (total, item) => total + item.subtotal,
       0
     );
+
     if (totalCalculated !== formattedGrossAmount) {
       console.error(
-        `Gross amount mismatch: expected ${totalCalculated}, but got ${formattedGrossAmount}`
+        `Ketidaksesuaian gross amount: diharapkan ${totalCalculated}, tetapi mendapatkan ${formattedGrossAmount}`
       );
       return res.status(400).json({
-        message: `Gross amount mismatch: expected ${totalCalculated}, but got ${formattedGrossAmount}`,
+        message: `Ketidaksesuaian gross amount: diharapkan ${totalCalculated}, tetapi mendapatkan ${formattedGrossAmount}`,
       });
     }
 
-    // Parameters for Midtrans transaction
-    const parameter = {
+    const transactionFee = 2500;
+    const finalGrossAmount = formattedGrossAmount + transactionFee;
+    const paymentParameters = {
       transaction_details: {
         order_id: orderId,
-        gross_amount: formattedGrossAmount,
+        gross_amount: finalGrossAmount,
       },
       customer_details: {
-        full_name: customerDetails.full_name,
+        full_name: customerDetails.fullName,
         email: customerDetails.email,
-        phone: customerDetails.phone,
+        phone: customerDetails.phoneNumber,
       },
-      item_details: itemDetails,
+      item_details: [
+        ...itemDetails,
+        {
+          id: "transaction_fee",
+          price: transactionFee,
+          name: "Biaya Transaksi",
+          quantity: 1,
+          subtotal: transactionFee,
+        },
+      ],
     };
 
-    const transaction = await midtrans.createTransaction(parameter);
-    console.log("Transaction Response:", transaction);
-
-    // Save assets to buyAssets collection
-    const buyAssetPromises = assets.map(async (asset) => {
-      const buyAssetDocRef = db.collection("buyAssets").doc(); // Create a new document
-      await buyAssetDocRef.set({
+    const transaction = await midtrans.createTransaction(paymentParameters);
+    // console.log("Respon Transaksi:", transaction);
+    const saveTransactionData = {
+      createdAt: new Date(),
+      orderId,
+      grossAmount: finalGrossAmount,
+      customerDetails,
+      assets: assets.map((asset) => ({
         assetId: asset.assetId,
-        price: asset.price,
-        name: asset.name,
-        image: asset.image || "url tidak ada",
-        datasetFile: asset.datasetFile || "tidak ada",
-        userId: uid,
-        description: asset.description || "No Description",
-        category: asset.category || "Uncategorized",
-        assetOwnerID: asset.assetOwnerID || "Asset Owner ID Not Available",
-        size: asset.size || asset.resolution || "size & Resolution tidak ada",
-        createdAt: new Date(),
-        orderId: orderId, // Link to the order
-      });
+        userId: asset.userId,
+        price: Number(asset.price),
+        name: asset.name ||
+          asset.audioName ||
+          asset.asset2DName ||
+          asset.asset3DName ||
+          asset.datasetName ||
+          asset.imageName ||
+          asset.videoName ||
+          "name Found",
+        image:
+          asset.image ||
+          asset.Image_umum ||
+          asset.video ||
+          asset.assetImageGame || asset.audioThumbnail || asset.datasetThumbnail ||
+          asset.asset2DThumbnail ||
+          asset.asset3DThumbnail || "url tidak ada",
+        datasetFile: asset.datasetFile || asset.asset3DFile || asset.asset2DFile || asset.uploadUrlAudio || "tidak ada",
+        description: asset.description,
+        datasetFile: asset.datasetFile,
+        category: asset.category,
+        assetOwnerID: asset.assetOwnerID,
+      })),
+      uid,
+      status: "pending",
+      token: transaction.token,
+      expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
+
+    // console.log("Data transaksi yang akan disimpan:", saveTransactionData);
+    await db.collection("transactions").doc(orderId).set(saveTransactionData);
+
+    const docIdsToDelete = assets.map(asset => asset.docId);
+    // console.log("DocIds to delete:", docIdsToDelete);
+
+    const deleteBatch = db.batch();
+
+    docIdsToDelete.forEach(docId => {
+      if (docId) {
+        const buyNowRef = db.collection("buyNow").doc(docId);
+        deleteBatch.delete(buyNowRef);
+      } else {
+        // console.error("Invalid docId encountered:", docId);
+      }
     });
 
-    await Promise.all(buyAssetPromises);
+    await deleteBatch.commit();
+    // console.log(`Dokumen dengan docId ${docIdsToDelete.join(", ")} telah dihapus dari buyNow.`);
 
-    // Save transaction details to transactions collection
-    await db
-      .collection("transactions")
-      .doc(orderId)
-      .set({
-        createdAt: new Date(),
-        orderId: orderId,
-        grossAmount: formattedGrossAmount,
-        customerDetails: customerDetails,
-        assets: assets,
-        uid: uid,
-        status: "success",
-        token: transaction.token,
-        transactionId: transaction.transaction_id || null,
-        channel: transaction.channel || null,
-        source: transaction.source || null,
-        expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      });
+    res.status(201).json({ token: transaction.token, orderId });
 
-    res.status(201).json({ token: transaction.token });
   } catch (error) {
-    console.error("Error creating transaction:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating transaction", error: error.message });
+    console.error("Kesalahan saat membuat transaksi:", error);
+    res.status(500).json({
+      message: "Kesalahan saat membuat transaksi",
+      error: error.message,
+    });
   }
 };
 
+
+export const saveBuyAssetsController = async (req, res) => {
+  try {
+    const { orderId, assets } = req.body;
+
+    if (!orderId || !assets || !Array.isArray(assets) || assets.length === 0) {
+      return res.status(400).json({ message: "Order ID dan aset diperlukan" });
+    }
+
+    const buyAssetsData = assets.map(asset => ({
+      assetId: asset.assetId,
+      userId: asset.userId,
+      price: Number(asset.price),
+      name: {
+        nameAsset:
+          asset.name ||
+          asset.audioName ||
+          asset.asset2DName ||
+          asset.asset3DName ||
+          asset.datasetName ||
+          asset.imageName ||
+          asset.videoName ||
+          "name Found",
+      },
+      image: asset.image || asset.audioThumbnail || asset.datasetThumbnail
+        || asset.asset2DThumbnail
+        || asset.asset3DThumbnail || "File Tidak Tersedia",
+      datasetFile: asset.datasetFile || asset.asset3DFile || asset.asset2DFile || asset.uploadUrlAudio || "tidak ada",
+      description: asset.description,
+      category: asset.category,
+      assetOwnerID: asset.assetOwnerID,
+      orderId,
+      purchasedAt: new Date(),
+      status: "success"
+    }));
+
+    const buyAssetsBatch = db.batch();
+    buyAssetsData.forEach(buyAsset => {
+      const buyAssetRef = db.collection("buyAssets").doc(buyAsset.assetId);
+      buyAssetsBatch.set(buyAssetRef, buyAsset);
+    });
+
+    await buyAssetsBatch.commit();
+    // console.log(`Data aset yang dibeli telah disimpan di buyAssets.`);
+
+    const assetIdsToDelete = assets.map(asset => asset.assetId);
+    const deleteBatch = db.batch();
+
+    assetIdsToDelete.forEach(assetId => {
+      const assetRef = db.collection("cartAssets").doc(assetId);
+      deleteBatch.delete(assetRef);
+    });
+
+    assetIdsToDelete.forEach(assetId => {
+      const buyNowRef = db.collection("buyNow").doc(assetId);
+      deleteBatch.delete(buyNowRef);
+    });
+
+    await deleteBatch.commit();
+    // console.log(`Dokumen dengan assetId ${assetIdsToDelete.join(", ")} telah dihapus dari cartAssets dan buyNow.`);
+
+    res.status(201).json({ message: "Data aset berhasil disimpan di buyAssets dan dihapus dari cartAssets serta buyNow." });
+
+  } catch (error) {
+    // console.error("Kesalahan saat menyimpan data ke buyAssets:", error);
+    res.status(500).json({
+      message: "Kesalahan saat menyimpan data ke buyAssets",
+      error: error.message,
+    });
+  }
+};
+
+// Controller untuk memperbarui status transaksi
 export const updateTransactionController = async (req, res) => {
   try {
     const { orderId, status } = req.body;
 
-    await db.collection("transactions").doc(orderId).update({
-      status: status,
-    });
+    if (!orderId || !status) {
+      return res
+        .status(400)
+        .json({ message: "Order ID dan status diperlukan" });
+    }
 
-    res.json({ message: "Transaction updated successfully" });
+    await db.collection("transactions").doc(orderId).update({ status });
+    res.json({ message: "Transaksi berhasil diperbarui" });
   } catch (error) {
-    console.error("Error updating transaction:", error);
+    console.error("Kesalahan saat memperbarui transaksi:", error);
     res
       .status(500)
-      .json({ message: "Error updating transaction", error: error.message });
+      .json({ message: "Kesalahan saat memperbarui transaksi", error: error.message });
   }
+};
+
+// Middleware untuk memvalidasi data transaksi
+export const validateTransactionData = (req, res, next) => {
+  const { orderId, grossAmount, customerDetails } = req.body;
+  if (
+    !orderId ||
+    grossAmount < 0.01 ||
+    !customerDetails ||
+    Object.keys(customerDetails).length === 0
+  ) {
+    return res.status(400).json({
+      message:
+        "Input tidak valid: orderId, grossAmount, dan customerDetails diperlukan dan grossAmount harus lebih besar dari atau sama dengan 0.01.",
+    });
+  }
+
+  next();
 };

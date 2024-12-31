@@ -26,7 +26,7 @@ export const loginUser = async (req, res) => {
       const adminDoc = adminSnapshot.docs[0];
       userData = adminDoc.data();
       role = userData.role;
-      uid = userData.uid; 
+      uid = userData.uid;
       userId = userData.uid;
       // console.log("Admin ditemukan, UID:", uid); 
     } else {
@@ -39,9 +39,9 @@ export const loginUser = async (req, res) => {
 
       const userDoc = userSnapshot.docs[0];
       userData = userDoc.data();
-      role = "user";  
-      uid = userData.uid;  
-      userId = userData.uid; 
+      role = "user";
+      uid = userData.uid;
+      userId = userData.uid;
       // console.log("Pengguna ditemukan, UID:", uid); 
     }
     // console.log("UID yang digunakan untuk token:", uid);
@@ -49,13 +49,13 @@ export const loginUser = async (req, res) => {
       {
         email: userData.email,
         role: role,
-        uid: uid, 
-        userId: userId,  
-        name: userData.firstName + " " + userData.lastName, 
-        image: userData.photoURL || userData.profileImageUrl, 
+        uid: uid,
+        userId: userId,
+        name: userData.firstName + " " + userData.lastName,
+        image: userData.photoURL || userData.profileImageUrl,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" } 
+      { expiresIn: "24h" }
     );
     res.status(200).json({
       token: token,
@@ -63,9 +63,9 @@ export const loginUser = async (req, res) => {
         email: userData.email,
         role,
         uid,
-        userId, 
-        name: userData.firstName + " " + userData.lastName, 
-        image: userData.photoURL || userData.profileImageUrl, 
+        userId,
+        name: userData.firstName + " " + userData.lastName,
+        image: userData.photoURL || userData.profileImageUrl,
       },
     });
   } catch (error) {
@@ -205,9 +205,8 @@ export const updateUser = async (req, res) => {
       // Dapatkan URL download dengan token
       const [metadata] = await fileUpload.getMetadata();
       const token = metadata.metadata.firebaseStorageDownloadTokens;
-      profileImageUrl = `https://firebasestorage.googleapis.com/v0/b/${
-        bucket.name
-      }/o/${encodeURIComponent(fileUpload.name)}?alt=media&token=${token}`;
+      profileImageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name
+        }/o/${encodeURIComponent(fileUpload.name)}?alt=media&token=${token}`;
 
       // Update URL gambar di Firestore
       await db.collection("users").doc(id).update({ profileImageUrl });
@@ -274,7 +273,7 @@ export const deleteUser = async (req, res) => {
 
       try {
         await bucket.file(filePath).delete();
-      } catch (err) {}
+      } catch (err) { }
     }
 
     await userRef.delete();
