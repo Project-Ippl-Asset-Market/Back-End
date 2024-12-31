@@ -206,6 +206,7 @@ export const saveBuyAssetsController = async (req, res) => {
       description: asset.description,
       category: asset.category,
       assetOwnerID: asset.assetOwnerID,
+      size: asset.size || asset.resolution || "size & Resolution tidak ada",
       orderId,
       purchasedAt: new Date(),
       status: "success"
